@@ -8,13 +8,20 @@ class GetMeme(Base):
         url = f"{self.base_url}/meme/{meme_id}"
         headers = self._get_headers(token)
         self.response = self.session.get(url, headers=headers)
-        return self
+
+        if self.response.status_code == 200:
+            try:
+                self.json = self.response.json()
+            except:
+                self.json = None
+        else:
+            self.json = None
+            return self
 
 
-    @allure.step('Get all memees')
+    @allure.step('Get all memes')
     def get_meme(self,  token):
         url = f"{self.base_url}/meme"
         headers = self._get_headers(token)
         self.response = self.session.get(url, headers=headers)
         return self
-

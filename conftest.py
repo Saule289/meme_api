@@ -1,7 +1,6 @@
 import pytest
-from requests import auth
 
-from endpoints import authorize
+
 from endpoints.get_meme import GetMeme
 from endpoints.create_meme import CreateMeme
 from endpoints.delete_meme import DeleteMeme

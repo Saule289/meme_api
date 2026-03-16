@@ -15,4 +15,5 @@ class ChangeMeme(Base):
             "info": info
         }
         self.response = self.session.put(url_endpoint, json=payload, headers=headers)
+        self.json = self.response.json()
         return self
