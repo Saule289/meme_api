@@ -76,3 +76,13 @@ class Base:
         assert self.response.status_code == expected_code, \
             f"Expected status {expected_code}, got {self.response.status_code}"
         return self
+
+
+    @allure.step('Check that user is unauthorized')
+    def check_that_user_is_unauthorized(self):
+        return self.check_status_code(401)
+
+
+    @allure.step('Check that status is bad request')
+    def check_that_status_is_bad_request(self):
+        assert self.response.status_code == 400

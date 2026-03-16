@@ -67,7 +67,6 @@ def test_update_meme(create_meme, change_meme, delete_meme, token):
     delete_meme.check_status_is_ok()
 
 
-@allure.step("delete meme")
 def test_delete_meme(create_meme, get_meme_by_id, delete_meme, token):
     meme = new_meme
     create_meme.create_meme(meme, token)
@@ -77,3 +76,47 @@ def test_delete_meme(create_meme, get_meme_by_id, delete_meme, token):
     delete_meme.check_status_is_ok()
     get_meme_by_id.get_meme_by_id(meme_id, token)
     get_meme_by_id.check_status_not_found()
+
+
+def test_create_meme_without_token(create_meme):
+    meme = new_meme
+    create_meme.create_meme(meme, token=None)
+    create_meme.check_that_user_is_unauthorized()
+
+
+def test_create_meme_with_invalid_token(create_meme):
+    meme = new_meme
+    create_meme.create_meme(meme, token="0000000")
+    create_meme.check_that_user_is_unauthorized()
+
+
+def test_get_meme_with_wrong_id(get_meme_by_id, token):
+    wrong_id = "1234567890"
+    get_meme_by_id.get_meme_by_id(wrong_id, token)
+    get_meme_by_id.check_status_not_found()
+
+
+def test_create_meme_with_invalid_payload(create_meme, token):
+    meme = {
+        "text": None,
+        "url": "not_a_url",
+        "tags": "wrong_format",
+        "info": {}
+    }
+
+    create_meme.create_meme(meme, token)
+    create_meme.check_that_status_is_bad_request()
+
+
+
+def test_delete_already_deleted_meme(create_meme, delete_meme, token):
+    meme = new_meme
+
+    create_meme.create_meme(meme, token)
+    meme_id = create_meme.get_id()
+
+    delete_meme.delete_meme_by_id(meme_id, token)
+    delete_meme.check_status_is_ok()
+
+    delete_meme.delete_meme_by_id(meme_id, token)
+    delete_meme.check_status_not_found()
