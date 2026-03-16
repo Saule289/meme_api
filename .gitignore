@@ -7,3 +7,4 @@ credentials.py
 allure-results
 allure-report
 .allure
+__pycache__/
