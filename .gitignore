@@ -8,3 +8,5 @@ allure-results
 allure-report
 .allure
 __pycache__/
+*.pyc
+.pytest_cache/
