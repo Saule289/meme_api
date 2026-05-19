@@ -1,68 +1,60 @@
-import allure
 
-new_meme = {
-"text": "Why this is so",
-"url": "https://topmemas.top/?mem=1770822180",
-"tags": ["salary","taxes", "life"],
-"info": {
-        "colors": [
-            "green",
-            "black",
-            "white"
-        ],
-        "objects": [
-            "big dog",
-            "small dog"
-        ]
-}
-}
-
-
-def test_create_meme(create_meme, delete_meme, token):
-    meme = new_meme
-    create_meme.create_meme(meme, token)
+def test_create_meme(create_meme, delete_meme, token, new_meme):
+    create_meme.create_meme(new_meme, token)  # Используем фикстуру
     create_meme.check_status_is_ok()
-    create_meme.check_text_is_correct()
-    create_meme.check_info_is_correct()
-    create_meme.check_tags_are_correct()
     meme_id = create_meme.get_id()
+
+
+    assert create_meme.json['text'] == new_meme['text']
+    assert create_meme.json['url'] == new_meme['url']
+    assert create_meme.json['tags'] == new_meme['tags']
+    assert create_meme.json['info'] == new_meme['info']
+
     delete_meme.delete_meme_by_id(meme_id, token)
-    delete_meme.check_status_is_ok()
 
 
-def test_get_meme(create_meme, get_meme_by_id, delete_meme, token):
-    meme = new_meme
-    create_meme.create_meme(meme, token)
-    meme_id = create_meme.get_id()
+def test_get_meme(created_meme, get_meme_by_id, token):
+    meme_id, meme_data = created_meme
+
     get_meme_by_id.get_meme_by_id(meme_id, token)
     get_meme_by_id.check_status_is_ok()
-    get_meme_by_id.check_text_is_correct()
-    get_meme_by_id.check_info_is_correct()
-    get_meme_by_id.check_tags_are_correct()
-    delete_meme.delete_meme_by_id(meme_id, token)
+
+    assert get_meme_by_id.json['text'] == meme_data['text']
+    assert get_meme_by_id.json['url'] == meme_data['url']
+    assert get_meme_by_id.json['tags'] == meme_data['tags']
+    assert get_meme_by_id.json['info'] == meme_data['info']
 
 
-def test_update_meme(create_meme, change_meme, delete_meme, token):
+def test_update_meme(create_meme, change_meme, delete_meme, token, new_meme):
     meme = new_meme
     create_meme.create_meme(meme, token)
     create_meme.check_status_is_ok()
     updated_meme_id = create_meme.get_id()
+
+
     updated_meme = meme.copy()
     updated_meme["text"] = "Updated meme text"
     updated_meme["tags"].append("salary")
+
+
     change_meme.update_meme(
-        meme_id = updated_meme_id,
-        text = updated_meme["text"],
-        info = updated_meme["info"],
-        tags = updated_meme["tags"],
-        url = updated_meme["url"],
-        token = token
+        meme_id=updated_meme_id,
+        text=updated_meme["text"],
+        url=updated_meme["url"],
+        tags=updated_meme["tags"],
+        info=updated_meme["info"],
+        token=token
     )
     change_meme.check_status_is_ok()
-    change_meme.check_text_is_correct()
-    change_meme.check_info_is_correct()
-    change_meme.check_tags_are_correct()
-    change_meme.check_meme_id_is_correct()
+
+
+    assert change_meme.json is not None, "Response JSON is None"
+    assert change_meme.json['text'] == "Updated meme text", "Text not updated"
+    assert change_meme.json['url'] == updated_meme['url'], "URL changed unexpectedly"
+    assert "salary" in change_meme.json['tags'], "Tag 'salary' not added"
+    assert change_meme.json['info'] == updated_meme['info'], "Info changed unexpectedly"
+    assert int(change_meme.json['id']) == updated_meme_id, "Meme ID changed"
+
     delete_meme.delete_meme_by_id(updated_meme_id, token)
     delete_meme.check_status_is_ok()
 
