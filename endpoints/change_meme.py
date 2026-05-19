@@ -15,5 +15,12 @@ class ChangeMeme(Base):
             "info": info
         }
         self.response = self.session.put(url_endpoint, json=payload, headers=headers)
-        self.json = self.response.json()
+        if self.response.status_code in [200, 201]:
+            try:
+                self.json = self.response.json()
+            except:
+                self.json = None
+        else:
+            self.json = None
+
         return self
