@@ -10,3 +10,7 @@ allure-report
 __pycache__/
 *.pyc
 .pytest_cache/
+# Allure reports
+allure-results/
+allure-report/
+*.zip
