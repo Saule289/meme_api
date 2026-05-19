@@ -16,7 +16,8 @@ class GetMeme(Base):
                 self.json = None
         else:
             self.json = None
-            return self
+
+        return self
 
 
     @allure.step('Get all memes')
