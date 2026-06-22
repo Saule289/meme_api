@@ -22,15 +22,13 @@ class TestMemeAPI:
             allure.attach(str(meme_id), "ID созданного мема", allure.attachment_type.TEXT)
 
         with allure.step("Проверка полей созданного мема"):
-            assert create_meme.json['text'] == new_meme['text'], "Текст не совпадает"
-            assert create_meme.json['url'] == new_meme['url'], "URL не совпадает"
-            assert create_meme.json['tags'] == new_meme['tags'], "Теги не совпадают"
-            assert create_meme.json['info'] == new_meme['info'], "Info не совпадает"
+            create_meme.check_meme_data(new_meme)
 
         with allure.step(f"Очистка: удаление мема {meme_id}"):
             from endpoints.delete_meme import DeleteMeme
             delete_meme = DeleteMeme()
             delete_meme.delete_meme_by_id(meme_id, token)
+
 
     @allure.story('Get Meme')
     @allure.title('Получение мема по ID')
@@ -45,10 +43,7 @@ class TestMemeAPI:
             get_meme_by_id.check_status_is_ok()
 
         with allure.step("Проверка полей полученного мема"):
-            assert get_meme_by_id.json['text'] == meme_data['text'], "Текст не совпадает"
-            assert get_meme_by_id.json['url'] == meme_data['url'], "URL не совпадает"
-            assert get_meme_by_id.json['tags'] == meme_data['tags'], "Теги не совпадают"
-            assert get_meme_by_id.json['info'] == meme_data['info'], "Info не совпадает"
+            get_meme_by_id.check_meme_data(meme_data)
 
 
     @allure.story('Update Meme')
@@ -76,9 +71,9 @@ class TestMemeAPI:
             change_meme.check_status_is_ok()
 
         with allure.step("Проверка обновленных полей"):
-            assert change_meme.json['text'] == "Updated meme text", "Текст не обновился"
-            assert "salary" in change_meme.json['tags'], "Тег 'salary' не добавлен"
-            assert int(change_meme.json['id']) == meme_id, "ID мема изменился"
+            change_meme.check_meme_updated("Updated meme text", updated_meme["tags"], meme_id)
+            change_meme.check_tag_exists("salary")
+
 
     @allure.story('Delete Meme')
     @allure.title('Удаление существующего мема')
@@ -115,6 +110,7 @@ class TestNegativeMemeAPI:
             create_meme.check_that_user_is_unauthorized()
             allure.attach("Запрос без токена корректно отклонен", "Результат", allure.attachment_type.TEXT)
 
+
     @allure.story('Authentication - Invalid Token')
     @allure.title('Создание мема с невалидным токеном')
     @pytest.mark.parametrize("invalid_token", [None, "", "0000000", "invalid", "Bearer xyz"])
@@ -126,23 +122,28 @@ class TestNegativeMemeAPI:
             create_meme.check_that_user_is_unauthorized()
             allure.attach(f"Токен '{invalid_token}' корректно отклонен", "Результат", allure.attachment_type.TEXT)
 
+
     @allure.story('Create Meme - Known API Issues')
     @allure.title('Создание мема с невалидными данными (документирование багов API)')
-    @pytest.mark.parametrize("invalid_meme, reason", [
-        ({"text": "", "url": "http://ok.com", "tags": ["ok"], "info": {}}, "API allows empty text"),
-        ({"text": "ok", "url": "not_a_url", "tags": ["ok"], "info": {}}, "API doesn't validate URL"),
+    @pytest.mark.parametrize("invalid_meme, expected_status", [
+        ({"text": "", "url": "http://ok.com", "tags": ["ok"], "info": {}}, 400),
+        ({"text": "ok", "url": "not_a_url", "tags": ["ok"], "info": {}}, 400),
+        ({"text": "ok", "url": "http://ok.com", "tags": "not_list", "info": {}}, 400),
+        ({"text": "ok", "url": "http://ok.com", "tags": ["ok"], "info": "not_dict"}, 400),
+        ({}, 400),
     ])
     @pytest.mark.xfail(reason="API bug: should validate these fields", strict=False)
-    def test_create_meme_validation_bugs(self, create_meme, token, invalid_meme, reason):
+    def test_create_meme_with_invalid_data(self, create_meme, token, invalid_meme, reason, expected_status):
         with allure.step(f"Попытка создания мема с невалидными данными: {reason}"):
             allure.attach(str(invalid_meme), "Невалидные данные", allure.attachment_type.JSON)
             create_meme.create_meme(invalid_meme, token)
 
-        with allure.step("Проверка что API должен вернуть ошибку (ожидается 400/422)"):
-            assert create_meme.response.status_code in [400, 422], \
+        with allure.step("Проверка что API должен вернуть ошибку (ожидается 422)"):
+            assert create_meme.check_status_code(expected_status), \
                 f"Should validate: {reason}"
             allure.attach(f"API вернул {create_meme.response.status_code}", "Статус ответа",
                           allure.attachment_type.TEXT)
+
 
     @allure.story('Get Meme - Invalid ID')
     @allure.title('Получение мема по несуществующему ID')
@@ -180,9 +181,10 @@ class TestNegativeMemeAPI:
                 token=token
             )
 
-        with allure.step("Проверка что API вернул ошибку (400/422)"):
-            assert change_meme.response.status_code in [400, 422], \
+        with allure.step("Проверка что API вернул ошибку (400)"):
+           change_meme.check_status_code(400), \
                 f"Expected 400/422, got {change_meme.response.status_code}"
+
 
     @allure.story('Update Meme - Known API Issues')
     @allure.title('Обновление мема с пустым текстом (документирование бага API)')
@@ -201,7 +203,7 @@ class TestNegativeMemeAPI:
             )
 
         with allure.step("Проверка что API вернул ошибку (ожидается 400/422)"):
-            assert change_meme.response.status_code in [400, 422], \
+            change_meme.check_status_code(400), \
                 f"Expected 400/422, got {change_meme.response.status_code}"
 
 

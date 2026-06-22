@@ -1,4 +1,4 @@
-from base import Base
+from endpoints.base import Base
 import allure
 
 class CheckToken(Base):
@@ -6,15 +6,22 @@ class CheckToken(Base):
     def check_token(self, token):
         url = f"{self.base_url}/authorize/{token}"
         self.response = self.session.get(url)
+        if self.response.status_code == 200:
+            try:
+                self.json = self.response.json()
+            except:
+                self.json = None
+        else:
+            self.json = None
+
         return self
+
 
     @allure.step("Get the username from response")
     def get_username_from_response(self):
-        if not self.is_token_valid():
+        if not self.json:
             return None
-        text = self.response.text
-        parts = text.split("Username is ")
-        return parts[1].strip() if len(parts) > 1 else None
+        return self.json.get('user') or self.json.get('username')
 
     @allure.step("Check that token is valid")
     def is_token_valid(self, expected_username=None):

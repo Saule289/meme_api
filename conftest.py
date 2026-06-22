@@ -1,9 +1,22 @@
+import os
+import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+sys.path.insert(0, str(Path(__file__).parent))
+load_dotenv()
+
+print(f"🔍 Current directory: {os.getcwd()}")
+print(f"🔍 .env exists: {os.path.exists('.env')}")
+print(f"🔍 .env path: {Path(__file__).parent / '.env'}")
+
 import pytest
 from endpoints.get_meme import GetMeme
 from endpoints.create_meme import CreateMeme
 from endpoints.delete_meme import DeleteMeme
 from endpoints.change_meme import ChangeMeme
 from endpoints.authorize import Authorize
+
 
 
 NEW_MEME_DATA = {
@@ -16,6 +29,18 @@ NEW_MEME_DATA = {
     }
 }
 
+@pytest.fixture(scope="session")
+def token():
+    username = os.getenv('API_USERNAME')
+
+    auth = Authorize()
+    auth.authorize_user(username)
+    auth.check_status_code(200)
+    token_value = auth.get_token()
+    auth.check_token_valid(token_value)
+
+    return token_value
+
 
 @pytest.fixture
 def new_meme():
@@ -24,7 +49,6 @@ def new_meme():
 @pytest.fixture
 def created_meme(create_meme, delete_meme, token, new_meme):
     create_meme.create_meme(new_meme, token)
-    create_meme.check_status_is_ok()
     meme_id = create_meme.get_id()
 
 
@@ -44,7 +68,6 @@ def created_meme_no_cleanup(create_meme, token):
     }
 
     create_meme.create_meme(meme_data, token)
-    create_meme.check_status_is_ok()
     meme_id = create_meme.get_id()
 
     yield meme_id, meme_data
@@ -68,11 +91,3 @@ def change_meme():
 @pytest.fixture()
 def create_meme():
     return CreateMeme()
-
-@pytest.fixture()
-def token():
-    auth = Authorize()
-    auth.authorize_user("saule").check_status_is_ok()
-    token_value = auth.get_token()
-    assert token_value is not None, "Токен не получен"
-    return token_value
