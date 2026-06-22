@@ -1,37 +1,43 @@
 import pytest
 import allure
+
+from conftest import token
 from endpoints.authorize import Authorize
+import os
 
 @allure.feature('Authorization')
 class TestAuthorization:
 
-    @allure.story('Positive login')
     def test_auth_success(self):
-        auth = Authorize()
-        auth.authorize_user("saule")
-        auth.check_status_is_ok()
-        assert auth.get_token() is not None, "Token should be returned"
-
-    @allure.story('Negative login')
-    @pytest.mark.parametrize("username, expected_status", [
-        ("", 200),
-        ("wrong_user", 200),
-        (None, 400),
-        ("invalid", 200),
-        ("any_string", 200),
-    ])
-    def test_auth_failure(self, username, expected_status):
+        username = os.getenv('API_USERNAME')
         auth = Authorize()
         auth.authorize_user(username)
-        assert auth.response.status_code == expected_status
+        auth.check_status_is_ok()
+
+        token_value = auth.get_token()
+        auth.check_token_valid(token_value)
+
+    @allure.story('Negative login')
+    @allure.story('Negative login - wrong username')
+    def test_auth_wrong_username(self):
+        auth = Authorize()
+        auth.authorize_user("wrong_user")
+        auth.check_status_code(401)
+
+
+    @allure.story('Negative login - empty username')
+    def test_auth_empty_username(self):
+        auth = Authorize()
+        auth.authorize_user("")
+        auth.check_status_code(400)
 
 
     @allure.story('Token validation')
-    def test_invalid_token(self, create_meme, new_meme):
+    def test_invalid_token_returns_401(self, create_meme, new_meme):
         create_meme.create_meme(new_meme, token="invalid_token_12345")
-        assert create_meme.response.status_code == 401
+        create_meme.check_status_code(401)
 
     @allure.story('Token validation - no token')
     def test_no_token_returns_401(self, create_meme, new_meme):
         create_meme.create_meme(new_meme, token=None)
-        assert create_meme.response.status_code == 401
+        create_meme.check_status_code(401)
